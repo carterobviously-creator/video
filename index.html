@@ -1,1 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Open Vice</title>
+<style>
+  body {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+  }
+  .tab-bar {
+    display: flex;
+    background-color: #252526;
+    border-bottom: 1px solid #333;
+  }
+  .tab-button {
+    padding: 10px 20px;
+    cursor: pointer;
+    border: none;
+    background-color: transparent;
+    color: #cccccc;
+    font-size: 16px;
+  }
+  .tab-button.active {
+    background-color: #1e1e1e;
+    border-bottom: 2px solid #007acc;
+  }
+  .tab-content {
+    display: none;
+    padding: 20px;
+  }
+  .tab-content.active {
+    display: block;
+  }
+  video {
+    max-width: 100%;
+    margin-top: 10px;
+  }
+  textarea {
+      width: 100%;
+      height: 300px;
+      box-sizing: border-box;
+      background-color: #2d2d2d;
+      color: #f1f1f1;
+      border: 1px solid #333;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 14px;
+  }
+  iframe {
+      width: 100%;
+      height: 300px;
+      border: 1px solid #333;
+      background-color: white;
+  }
+  button {
+      background-color: #007acc;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      margin: 5px 0;
+      cursor: pointer;
+  }
+  button:hover {
+      background-color: #005f9e;
+  }
+</style>
+</head>
+<body>
 
+<div class="tab-bar">
+  <button class="tab-button active" data-tab="video">Video</button>
+  <button class="tab-button" data-tab="music">Music</button>
+  <button class="tab-button" data-tab="code">Code</button>
+</div>
+
+<div id="video" class="tab-content active">
+  <input type="file" id="video-input" accept="video/*">
+  <div>
+    <button id="play-button">Play</button>
+    <button id="pause-button">Pause</button>
+  </div>
+  <video id="video-preview" controls></video>
+</div>
+
+<div id="music" class="tab-content">
+  <button id="play-tone">Play Tone</button>
+  <button id="stop-tone">Stop Tone</button>
+</div>
+
+<div id="code" class="tab-content">
+  <textarea id="code-editor" placeholder="Enter HTML code here..."></textarea>
+  <button id="run-button">Run</button>
+  <iframe id="code-preview"></iframe>
+</div>
+
+<script>
+  // --- Tab Switching ---
+  const tabButtons = document.querySelectorAll('.tab-button');
+  const tabContents = document.querySelectorAll('.tab-content');
+
+  tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      // Deactivate all
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      tabContents.forEach(content => content.classList.remove('active'));
+
+      // Activate the clicked one
+      button.classList.add('active');
+      const activeTab = document.getElementById(button.dataset.tab);
+      if (activeTab) activeTab.classList.add('active');
+    });
+  });
+
+  // --- Video Tab ---
+  const videoInput = document.getElementById('video-input');
+  const videoPreview = document.getElementById('video-preview');
+  const playButton = document.getElementById('play-button');
+  const pauseButton = document.getElementById('pause-button');
+
+  videoInput.addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const objectURL = URL.createObjectURL(file);
+      videoPreview.src = objectURL;
+    }
+  });
+
+  playButton.addEventListener('click', () => videoPreview.play());
+  pauseButton.addEventListener('click', () => videoPreview.pause());
+
+  // --- Music Tab ---
+  let audioCtx;
+  let oscillator;
+
+  document.getElementById('play-tone').addEventListener('click', () => {
+    if (!audioCtx) {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      } catch (e) {
+        console.error("Web Audio API is not supported in this browser");
+        alert("Web Audio API is not supported in this browser");
+        return;
+      }
+    }
+    
+    // Resume context if it's in a suspended state (required by browser autoplay policies)
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+
+    if (oscillator) {
+        oscillator.stop();
+        oscillator.disconnect();
+    }
+
+    oscillator = audioCtx.createOscillator();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(440, audioCtx.currentTime); // A4 pitch
+    oscillator.connect(audioCtx.destination);
+    oscillator.start();
+  });
+
+  document.getElementById('stop-tone').addEventListener('click', () => {
+    if (oscillator && audioCtx && audioCtx.state === 'running') {
+      oscillator.stop();
+      oscillator.disconnect();
+      oscillator = null;
+    }
+  });
+
+  // --- Code Tab ---
+  const runButton = document.getElementById('run-button');
+  const codeEditor = document.getElementById('code-editor');
+  const codePreview = document.getElementById('code-preview');
+
+  runButton.addEventListener('click', () => {
+    const code = codeEditor.value;
+    codePreview.srcdoc = code;
+  });
+</script>
+
+</body>
+</html>
